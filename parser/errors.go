@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ysugimoto/tiny-template/token"
 )
@@ -20,10 +21,22 @@ func (p *ParseError) Error() string {
 	)
 }
 
-func UnexpectedToken(t token.Token, expect token.TokenType) *ParseError {
+func UnexpectedToken(t token.Token, expect ...token.TokenType) *ParseError {
+	if len(expect) == 0 {
+		return &ParseError{
+			Token:   t,
+			Message: fmt.Sprintf(`Unexpected Token "%s" found`, t.Type),
+		}
+	}
+
+	expects := make([]string, len(expect))
+	for i, e := range expect {
+		expects[i] = `"` + string(e) + `"`
+	}
+
 	return &ParseError{
 		Token:   t,
-		Message: fmt.Sprintf(`Unexpected Token "%s" found, expects "%s"`, t.Type, expect),
+		Message: fmt.Sprintf(`Unexpected Token "%s" found, expects %s`, t.Type, strings.Join(expects, " or ")),
 	}
 }
 

@@ -5,8 +5,11 @@ import "fmt"
 type TokenType string
 
 type Token struct {
-	Type     TokenType
-	Literal  string
+	Type      TokenType
+	Literal   string
+	LeftTrim  bool
+	RightTrim bool
+
 	Line     int
 	Position int
 	File     string
@@ -36,15 +39,15 @@ const (
 	FALSE  = "FALSE"
 	LF     = "LF"
 
-	// Template specific
+	// Template spec
 	LITERAL       = "LITERAL"       // arbitrary strings outside control
 	INTERPORATION = "INTERPORATION" // "${"
+	CONTROL_START = "CONTROL_START" // "%{"
+	CONTROL_END   = "CONTROL_END"   // "}"
 
 	// Operators
-	EQUAL     = "EQUAL"    // "=="
-	NOT_EQUAL = "NOTEQUAL" // "!="
-	// REGEX_MATCH        = "REGEX"              // "~"
-	// NOT_REGEX_MATCH    = "NOT_REGEX_MATCH"    // "!~"
+	EQUAL              = "EQUAL"              // "=="
+	NOT_EQUAL          = "NOTEQUAL"           // "!="
 	GREATER_THAN       = "GREATER_THAN"       // ">"
 	LESS_THAN          = "LESS_THAN"          // "<"
 	GREATER_THAN_EQUAL = "GREATER_THAN_EQUAL" // >="
@@ -53,7 +56,6 @@ const (
 	OR                 = "OR"                 // "||"
 
 	// Punctuation
-	// https://developer.fastly.com/reference/vcl/operators/#reserved-punctuation
 	LEFT_PAREN    = "LEFT_PAREN"    // "("
 	RIGHT_PAREN   = "RIGHT_PAREN"   // ")"
 	LEFT_BRACKET  = "LEFT_BRACKET"  // "["

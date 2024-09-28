@@ -13,7 +13,11 @@ type State int
 
 const (
 	Default State = iota
+	ControlStart
+	ControlStartTrim
 	Control
+	ControlEnd
+	ControlEndTrim
 	Interporation
 )
 
@@ -24,7 +28,7 @@ type Lexer struct {
 	index  int
 	buffer *bytes.Buffer
 	lines  []string
-	file   string
+	// file   string
 	isEOF  bool
 	states []State
 }
@@ -52,13 +56,11 @@ func (l *Lexer) replaceState(s State) {
 	l.states[len(l.states)-1] = s
 }
 
-func (l *Lexer) popState() State {
+func (l *Lexer) popState() {
 	if len(l.states) == 0 {
-		return Default
+		return
 	}
-	popped := l.states[len(l.states)-1]
 	l.states = l.states[0 : len(l.states)-1]
-	return popped
 }
 
 func (l *Lexer) currentState() State {
@@ -99,7 +101,28 @@ func (l *Lexer) NewLine() {
 }
 
 func (l *Lexer) NextToken() token.Token {
-	defer l.readChar() // forward to next character
+	// Hook states should return without forward reading character
+	switch l.currentState() {
+	case ControlStart:
+		l.replaceState(Control)
+		return newToken(token.CONTROL_START, "%{", l.line, l.index-2)
+	case ControlStartTrim:
+		l.replaceState(Control)
+		t := newToken(token.CONTROL_START, "%{~", l.line, l.index-3)
+		t.LeftTrim = true
+		return t
+	case ControlEnd:
+		l.popState()
+		return newToken(token.CONTROL_END, "}", l.line, l.index-1)
+	case ControlEndTrim:
+		l.popState()
+		t := newToken(token.CONTROL_END, "~}", l.line, l.index-2)
+		t.RightTrim = true
+		return t
+	}
+
+	// Following state must forward reading
+	defer l.readChar()
 
 	switch l.currentState() {
 	case Control:
@@ -126,8 +149,23 @@ func (l *Lexer) nextToken() token.Token {
 				l.readChar()
 				goto CONT
 			case '{':
-				l.pushState(Control)
 				l.readChar()
+				if l.peekChar() == '~' { // trim control
+					l.readChar()
+					if len(stack) == 0 {
+						l.pushState(Control)
+						t := newToken(token.CONTROL_START, "%{~", line, index)
+						t.LeftTrim = true
+						return t
+					}
+					l.pushState(ControlStartTrim)
+				} else {
+					if len(stack) == 0 {
+						l.pushState(Control)
+						return newToken(token.CONTROL_START, "%{", line, index)
+					}
+					l.pushState(ControlStart)
+				}
 				return newToken(token.LITERAL, string(stack), line, index)
 			default:
 				return newToken(token.ILLEGAL, "Unexpected '%' character found", l.line, l.index)
@@ -139,8 +177,12 @@ func (l *Lexer) nextToken() token.Token {
 				l.readChar()
 				goto CONT
 			case '{':
-				l.pushState(Interporation)
 				l.readChar()
+				if len(stack) == 0 {
+					l.readChar()
+					return l.nextInterporationToken()
+				}
+				l.pushState(Interporation)
 				return newToken(token.LITERAL, string(stack), line, index)
 			default:
 				return newToken(token.ILLEGAL, "Unexpected '$' character found", l.line, l.index)
@@ -163,7 +205,6 @@ func (l *Lexer) nextToken() token.Token {
 }
 
 func (l *Lexer) nextControlToken() token.Token {
-
 	l.skipWhitespace()
 
 	index, line := l.index, l.line
@@ -176,8 +217,7 @@ func (l *Lexer) nextControlToken() token.Token {
 		return newToken(token.ILLEGAL, "=", l.line, l.index)
 	case '}': // end control
 		l.popState()
-		l.readChar()
-		return l.nextToken()
+		return newToken(token.CONTROL_END, "}", l.line, l.index)
 	case '(':
 		return newToken(token.LEFT_PAREN, "(", line, index)
 	case ')':
@@ -223,7 +263,14 @@ func (l *Lexer) nextControlToken() token.Token {
 			return newToken(token.NOT, "!", line, index)
 		}
 	case '~':
-		return newToken(token.TILDA, "~", line, index)
+		if l.peekChar() == '}' {
+			l.readChar()
+			l.popState()
+			t := newToken(token.CONTROL_END, "~}", line, index)
+			t.RightTrim = true
+			return t
+		}
+		return newToken(token.ILLEGAL, string(l.char), line, index)
 	case 0x0A: // LF
 		return newToken(token.LF, "\n", line, index)
 	case 0x00:
