@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/ysugimoto/tiny-template/token"
+	"github.com/ysugimoto/tender/token"
 )
 
 func TestLexer(t *testing.T) {
@@ -44,7 +44,7 @@ That's all, very simplified!
 		{Type: token.IDENT, Literal: "some_list", Line: 3, Position: 13},
 		{Type: token.CONTROL_END, Literal: "~}", Line: 3, Position: 23, RightTrim: true},
 		{Type: token.LITERAL, Literal: "\ninside loop, ", Line: 3, Position: 25},
-		{Type: token.INTERPORATION, Literal: "v", Line: 4, Position: 16},
+		{Type: token.INTERPORATION, Literal: "v", Line: 4, Position: 14},
 		{Type: token.LITERAL, Literal: " is variable interporation.\n", Line: 4, Position: 18},
 		{Type: token.CONTROL_START, Literal: "%{", Line: 5, Position: 1},
 		{Type: token.ENDFOR, Literal: "endfor", Line: 5, Position: 4},
@@ -76,7 +76,7 @@ That's all, very simplified!
 		{Type: token.STRING, Literal: "v", Line: 11, Position: 12},
 		{Type: token.CONTROL_END, Literal: "}", Line: 11, Position: 16},
 		{Type: token.LITERAL, Literal: "\nif expression is also supported. Interporation is ", Line: 11, Position: 17},
-		{Type: token.INTERPORATION, Literal: "v", Line: 12, Position: 53},
+		{Type: token.INTERPORATION, Literal: "v", Line: 12, Position: 51},
 		{Type: token.LITERAL, Literal: ".\n", Line: 12, Position: 55},
 
 		{Type: token.CONTROL_START, Literal: "%{", Line: 13, Position: 1},
@@ -188,7 +188,7 @@ func TestBeginningControl(t *testing.T) {
 				{Type: token.INT, Literal: "0", Line: 1, Position: 27},
 				{Type: token.CONTROL_END, Literal: "}", Line: 1, Position: 28},
 
-				{Type: token.INTERPORATION, Literal: "i", Line: 1, Position: 31},
+				{Type: token.INTERPORATION, Literal: "i", Line: 1, Position: 29},
 
 				{Type: token.CONTROL_START, Literal: "%{", Line: 1, Position: 33},
 				{Type: token.ENDIF, Literal: "endif", Line: 1, Position: 35},
@@ -213,5 +213,36 @@ func TestBeginningControl(t *testing.T) {
 			}
 		}
 	}
+}
 
+func TestVariableAccessSyntax(t *testing.T) {
+	tests := []struct {
+		input   string
+		expects []token.Token
+	}{
+		{
+			input: "${a.b}",
+			expects: []token.Token{
+				{Type: token.INTERPORATION, Literal: "a.b", Line: 1, Position: 1},
+			},
+		},
+		{
+			input: `${a["index"]}`,
+			expects: []token.Token{
+				{Type: token.INTERPORATION, Literal: `a["index"]`, Line: 1, Position: 1},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		l := NewFromString(tt.input)
+
+		for i, e := range tt.expects {
+			tok := l.NextToken()
+
+			if diff := cmp.Diff(e, tok); diff != "" {
+				t.Errorf(`Test[%d] failed, diff=%s`, i, diff)
+			}
+		}
+	}
 }

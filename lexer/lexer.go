@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/ysugimoto/tiny-template/token"
+	"github.com/ysugimoto/tender/token"
 )
 
 type State int
@@ -128,7 +128,9 @@ func (l *Lexer) NextToken() token.Token {
 	case Control:
 		return l.nextControlToken()
 	case Interporation:
-		return l.nextInterporationToken()
+		t := l.nextInterporationToken()
+		t.Position -= 2
+		return t
 	default:
 		return l.nextToken()
 	}
@@ -180,7 +182,9 @@ func (l *Lexer) nextToken() token.Token {
 				l.readChar()
 				if len(stack) == 0 {
 					l.readChar()
-					return l.nextInterporationToken()
+					t := l.nextInterporationToken()
+					t.Position -= 2
+					return t
 				}
 				l.pushState(Interporation)
 				return newToken(token.LITERAL, string(stack), line, index)
@@ -215,6 +219,8 @@ func (l *Lexer) nextControlToken() token.Token {
 			return newToken(token.EQUAL, "==", line, index)
 		}
 		return newToken(token.ILLEGAL, "=", l.line, l.index)
+	case '-':
+		return newToken(token.MINUS, "-", line, index)
 	case '}': // end control
 		l.popState()
 		return newToken(token.CONTROL_END, "}", l.line, l.index)
@@ -278,15 +284,10 @@ func (l *Lexer) nextControlToken() token.Token {
 	default:
 		switch {
 		case isLetter(l.char):
-			literal := l.readIdentifier()
-
-			// Read more neighbor digit, dot, underscore
-			for l.char == '_' || l.char == '.' || isDigit(l.char) {
-				literal += string(l.char)
-				l.readChar()
-				literal += l.readIdentifier()
+			literal, ok := l.readLiteral()
+			if !ok {
+				return newToken(token.ILLEGAL, "", line, index)
 			}
-
 			return newToken(token.LookupIdent(literal), literal, line, index)
 		case isDigit(l.char):
 			num := l.readNumber()
@@ -315,15 +316,11 @@ func (l *Lexer) nextInterporationToken() token.Token {
 			// TODO: Maybe we implement filter process in the future
 			switch {
 			case isLetter(l.char):
-				literal += l.readIdentifier()
-
-				// Read more neighbor digit, dot, underscore
-				for l.char == '_' || l.char == '.' || isDigit(l.char) {
-					literal += string(l.char)
-					l.readChar()
-					literal += l.readIdentifier()
+				lt, ok := l.readLiteral()
+				if !ok {
+					return newToken(token.ILLEGAL, string(l.char), line, index)
 				}
-
+				literal = lt
 			default:
 				return newToken(token.ILLEGAL, string(l.char), line, index)
 			}
@@ -337,6 +334,45 @@ func (l *Lexer) nextInterporationToken() token.Token {
 func (l *Lexer) skipWhitespace() {
 	for l.char == ' ' || l.char == '\t' || l.char == '\r' {
 		l.readChar()
+	}
+}
+
+func (l *Lexer) readLiteral() (string, bool) {
+	literal := l.readIdentifier()
+
+	// Read more neighbor digit, dot, underscore, left bracket
+	for {
+		peek := l.peekChar()
+		switch {
+		case isLetter(peek):
+			l.readChar()
+			literal += l.readIdentifier()
+		case peek == '_' || peek == '.' || isDigit(l.char):
+			l.readChar()
+			literal += string(l.char)
+		// Array or map indexing as `["..."]`
+		case peek == '[':
+			l.readChar()
+			literal += string(l.char)
+			switch {
+			case l.peekChar() == '"': // string - object key indexing
+				l.readChar()
+				literal += `"` + l.readString() + `"`
+			case isDigit(l.peekChar()): // digit - array indexing
+				l.readChar()
+				literal += l.readNumber()
+			default: // illegal
+				return "", false
+			}
+
+			if l.peekChar() != ']' {
+				return "", false
+			}
+			l.readChar()
+			literal += string(l.char)
+		default:
+			return literal, true
+		}
 	}
 }
 

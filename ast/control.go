@@ -1,6 +1,6 @@
 package ast
 
-import "github.com/ysugimoto/tiny-template/token"
+import "github.com/ysugimoto/tender/token"
 
 type For struct {
 	Token     token.Token

@@ -1,4 +1,4 @@
-module github.com/ysugimoto/tiny-template
+module github.com/ysugimoto/tender
 
 go 1.22
 

@@ -2,8 +2,8 @@ package parser
 
 import (
 	"github.com/pkg/errors"
-	"github.com/ysugimoto/tiny-template/ast"
-	"github.com/ysugimoto/tiny-template/token"
+	"github.com/ysugimoto/tender/ast"
+	"github.com/ysugimoto/tender/token"
 )
 
 func (p *Parser) parseExpression(precedence int) (ast.Expression, error) {

@@ -2,47 +2,28 @@ package parser
 
 import (
 	"github.com/pkg/errors"
-	"github.com/ysugimoto/tiny-template/ast"
-	"github.com/ysugimoto/tiny-template/token"
+	"github.com/ysugimoto/tender/ast"
+	"github.com/ysugimoto/tender/token"
 )
 
-func (p *Parser) parseControl(isRoot bool) (ast.Control, error) {
+func (p *Parser) parseControl(cs controlState) (ast.Control, error) {
 	leftTrim := p.curToken.LeftTrim
 
 	// point to control keyword and copy trimming flag
 	p.NextToken()
 	p.curToken.LeftTrim = leftTrim
 
-	switch p.curToken.Type {
-	case token.FOR:
-		return p.parseForControl()
-	case token.IF:
-		return p.parseIfControl()
+	parsers, ok := p.controlParsers[cs]
+	if !ok {
+		return nil, errors.WithStack(UndefinedControlParserState(p.curToken))
+	}
 
-	// Following control is forbidden to present on root
-	case token.ENDFOR:
-		if isRoot {
-			return nil, errors.WithStack(UnexpectedToken(p.curToken))
-		}
-		return p.parseEndForControl()
-	case token.ELSEIF:
-		if isRoot {
-			return nil, errors.WithStack(UnexpectedToken(p.curToken))
-		}
-		return p.parseElseIfControl()
-	case token.ELSE:
-		if isRoot {
-			return nil, errors.WithStack(UnexpectedToken(p.curToken))
-		}
-		return p.parseElseControl()
-	case token.ENDIF:
-		if isRoot {
-			return nil, errors.WithStack(UnexpectedToken(p.curToken))
-		}
-		return p.parseEndIfControl()
-	default:
+	parser, ok := parsers[p.curToken.Type]
+	if !ok {
 		return nil, errors.WithStack(UnexpectedToken(p.curToken))
 	}
+
+	return parser()
 }
 
 func (p *Parser) parseForControl() (*ast.For, error) {
@@ -96,7 +77,7 @@ func (p *Parser) parseForControl() (*ast.For, error) {
 				Value: p.curToken.Literal,
 			})
 		case token.CONTROL_START:
-			control, err := p.parseControl(false)
+			control, err := p.parseControl(FOR)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
@@ -136,7 +117,9 @@ func (p *Parser) parseEndForControl() (*ast.EndFor, error) {
 
 func (p *Parser) parseIfControl() (*ast.If, error) {
 	node := &ast.If{
-		Token: p.curToken,
+		Token:       p.curToken,
+		Another:     []*ast.ElseIf{},
+		Consequence: []ast.Node{},
 	}
 
 	p.NextToken() // point to first condition token
@@ -166,6 +149,15 @@ func (p *Parser) parseIfControl() (*ast.If, error) {
 		}
 	}
 
+	// Acceptable control statement depends on the parser state
+	// So change state on the following for-loop inside.
+	//
+	// The acceptable controls spec are:
+	// IF:     for, if, elseif, else, endif
+	// ELSEIF: for, if, elseif, else, endif
+	// ELSE:   for, if, endif
+	state := IF
+
 	for {
 		switch p.curToken.Type {
 		case token.LITERAL:
@@ -174,7 +166,7 @@ func (p *Parser) parseIfControl() (*ast.If, error) {
 				Value: p.curToken.Literal,
 			})
 		case token.CONTROL_START:
-			control, err := p.parseControl(false)
+			control, err := p.parseControl(state)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
@@ -183,6 +175,8 @@ func (p *Parser) parseIfControl() (*ast.If, error) {
 				node.Another = append(node.Another, t)
 			case *ast.Else:
 				node.Alternative = t
+				// move state to ELSE
+				state = ELSE
 			case *ast.EndIf:
 				node.End = t
 				goto OUT
@@ -197,6 +191,7 @@ func (p *Parser) parseIfControl() (*ast.If, error) {
 		default:
 			return nil, errors.WithStack(UnexpectedToken(p.curToken))
 		}
+		p.NextToken()
 	}
 OUT:
 
@@ -205,7 +200,8 @@ OUT:
 
 func (p *Parser) parseElseIfControl() (*ast.ElseIf, error) {
 	node := &ast.ElseIf{
-		Token: p.curToken,
+		Token:       p.curToken,
+		Consequence: []ast.Node{},
 	}
 
 	p.NextToken() // point to first condition token
@@ -225,12 +221,40 @@ func (p *Parser) parseElseIfControl() (*ast.ElseIf, error) {
 	return node, nil
 }
 
-func (p *Parser) parseElseControl() (*ast.Else, error) {
-	node := &ast.Else{
-		Token: p.curToken,
+func (p *Parser) parseSeparatedElseIfControl() (*ast.ElseIf, error) {
+	node := &ast.ElseIf{
+		Token:       p.curToken,
+		Consequence: []ast.Node{},
 	}
 
+	p.NextToken() // point to separated if token
 	p.NextToken() // point to first condition token
+
+	exp, err := p.parseExpression(LOWEST)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	node.Condition = exp
+
+	if !p.peekTokenIs(token.CONTROL_END) {
+		return nil, errors.WithStack(UnexpectedToken(p.curToken, token.CONTROL_END))
+	}
+	p.NextToken() // point to CONTROL_END
+	node.Token.RightTrim = p.curToken.RightTrim
+
+	return node, nil
+}
+
+func (p *Parser) parseElseControl() (ast.Control, error) {
+	// else if also treats as elseif
+	if p.peekTokenIs(token.IF) {
+		return p.parseSeparatedElseIfControl()
+	}
+
+	node := &ast.Else{
+		Token:       p.curToken,
+		Consequence: []ast.Node{},
+	}
 
 	if !p.peekTokenIs(token.CONTROL_END) {
 		return nil, errors.WithStack(UnexpectedToken(p.curToken, token.CONTROL_END))
@@ -245,8 +269,6 @@ func (p *Parser) parseEndIfControl() (*ast.EndIf, error) {
 	node := &ast.EndIf{
 		Token: p.curToken,
 	}
-
-	p.NextToken() // point to first condition token
 
 	if !p.peekTokenIs(token.CONTROL_END) {
 		return nil, errors.WithStack(UnexpectedToken(p.curToken, token.CONTROL_END))

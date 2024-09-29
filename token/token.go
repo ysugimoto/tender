@@ -63,6 +63,7 @@ const (
 	COMMA         = "COMMA"         // ","
 	NOT           = "NOT"           // "!"
 	TILDA         = "TILDA"         // "~"
+	MINUS         = "MINUS"         // "-"
 
 	// Keywords
 	FOR    = "FOR"    // for

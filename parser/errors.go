@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ysugimoto/tiny-template/token"
+	"github.com/ysugimoto/tender/token"
 )
 
 type ParseError struct {
@@ -51,5 +51,12 @@ func UndefinedPrefix(t token.Token) *ParseError {
 	return &ParseError{
 		Token:   t,
 		Message: fmt.Sprintf(`Undefined prefix parser for "%s"`, t.Type),
+	}
+}
+
+func UndefinedControlParserState(t token.Token) *ParseError {
+	return &ParseError{
+		Token:   t,
+		Message: fmt.Sprintf(`Undefined control parser for "%s"`, t.Type),
 	}
 }

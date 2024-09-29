@@ -2,9 +2,9 @@ package parser
 
 import (
 	"github.com/pkg/errors"
-	"github.com/ysugimoto/tiny-template/ast"
-	"github.com/ysugimoto/tiny-template/lexer"
-	"github.com/ysugimoto/tiny-template/token"
+	"github.com/ysugimoto/tender/ast"
+	"github.com/ysugimoto/tender/lexer"
+	"github.com/ysugimoto/tender/token"
 )
 
 const (
@@ -34,8 +34,18 @@ var precedences = map[token.TokenType]int{
 }
 
 type (
-	prefixParser func() (ast.Expression, error)
-	infixParser  func(ast.Expression) (ast.Expression, error)
+	prefixParser  func() (ast.Expression, error)
+	infixParser   func(ast.Expression) (ast.Expression, error)
+	controlParser func() (ast.Control, error)
+)
+
+type controlState int
+
+const (
+	ROOT controlState = iota + 1
+	FOR
+	IF
+	ELSE
 )
 
 type Parser struct {
@@ -45,8 +55,9 @@ type Parser struct {
 	curToken  token.Token
 	peekToken token.Token
 
-	prefixParsers map[token.TokenType]prefixParser
-	infixParsers  map[token.TokenType]infixParser
+	prefixParsers  map[token.TokenType]prefixParser
+	infixParsers   map[token.TokenType]infixParser
+	controlParsers map[controlState]map[token.TokenType]controlParser
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -59,13 +70,12 @@ func New(l *lexer.Lexer) *Parser {
 		token.INT:        func() (ast.Expression, error) { return p.parseInt() },
 		token.FLOAT:      func() (ast.Expression, error) { return p.parseFloat() },
 		token.NOT:        func() (ast.Expression, error) { return p.parsePrefixExpression() },
+		token.MINUS:      func() (ast.Expression, error) { return p.parsePrefixExpression() },
 		token.TRUE:       func() (ast.Expression, error) { return p.parseBool(), nil },
 		token.FALSE:      func() (ast.Expression, error) { return p.parseBool(), nil },
 		token.LEFT_PAREN: func() (ast.Expression, error) { return p.parseGroupedExpression() },
 	}
 	p.infixParsers = map[token.TokenType]infixParser{
-		// token.STRING:             p.parseInfixStringConcatExpression,
-		// token.IDENT:              p.parseInfixStringConcatExpression,
 		token.EQUAL:              p.parseInfixExpression,
 		token.NOT_EQUAL:          p.parseInfixExpression,
 		token.GREATER_THAN:       p.parseInfixExpression,
@@ -74,6 +84,29 @@ func New(l *lexer.Lexer) *Parser {
 		token.LESS_THAN_EQUAL:    p.parseInfixExpression,
 		token.AND:                p.parseInfixExpression,
 		token.OR:                 p.parseInfixExpression,
+	}
+	p.controlParsers = map[controlState]map[token.TokenType]controlParser{
+		ROOT: {
+			token.FOR: func() (ast.Control, error) { return p.parseForControl() },
+			token.IF:  func() (ast.Control, error) { return p.parseIfControl() },
+		},
+		FOR: {
+			token.FOR:    func() (ast.Control, error) { return p.parseForControl() },
+			token.IF:     func() (ast.Control, error) { return p.parseIfControl() },
+			token.ENDFOR: func() (ast.Control, error) { return p.parseEndForControl() },
+		},
+		IF: {
+			token.FOR:    func() (ast.Control, error) { return p.parseForControl() },
+			token.IF:     func() (ast.Control, error) { return p.parseIfControl() },
+			token.ELSEIF: func() (ast.Control, error) { return p.parseElseIfControl() },
+			token.ELSE:   func() (ast.Control, error) { return p.parseElseControl() },
+			token.ENDIF:  func() (ast.Control, error) { return p.parseEndIfControl() },
+		},
+		ELSE: {
+			token.FOR:   func() (ast.Control, error) { return p.parseForControl() },
+			token.IF:    func() (ast.Control, error) { return p.parseIfControl() },
+			token.ENDIF: func() (ast.Control, error) { return p.parseEndIfControl() },
+		},
 	}
 
 	p.NextToken()
@@ -133,7 +166,7 @@ func (p *Parser) parse() (ast.Node, error) {
 			Value: p.curToken.Literal,
 		}, nil
 	case token.CONTROL_START:
-		return p.parseControl(true)
+		return p.parseControl(ROOT)
 	case token.INTERPORATION:
 		return &ast.Interporation{
 			Token: p.curToken,
