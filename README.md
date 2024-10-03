@@ -35,13 +35,9 @@ import (
 func main() {
     tmpl := "Hello ${name}!"
 
-    rendered := tender.Must(
-        tender.New(strings.NewReader(tmpl)).
-            With(tender.Variables{
-                "name": "tender",
-            }).
-            Render(),
-    )
+    rendered := tender.Must(tender.Render(tmpl, map[string]any{
+        "name": "tender",
+    }))
 
     fmt.Println(rendered) //=> Hello tender!"
 }
@@ -114,6 +110,19 @@ The environment vairable is ${SERVICE_NAME}.
 ```
 
 If you specify "SERVICE_NAME" environment variable with "tender", the result will be `The environment variable is tender`.
+
+## Performance Benchmark
+
+```
+goos: darwin
+goarch: arm64
+pkg: benchmark
+BenchmarkRaymondRender-10          21631             54697 ns/op            9719 B/op        278 allocs/op
+BenchmarkNativeRender-10          120549              9344 ns/op            7556 B/op        141 allocs/op
+BenchmarkTenderRender-10           77595             16370 ns/op           18521 B/op        442 allocs/op
+```
+
+We need to improve to reduce allocation X(
 
 ## Contribution
 

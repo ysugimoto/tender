@@ -23,6 +23,16 @@ type Template struct {
 	locals []value.Value
 }
 
+// Shorthand render function from string
+func Render(tpl string, vars Variables) (string, error) {
+	return NewFromString(tpl).With(vars).Render()
+}
+
+// Shorthand render function from stream
+func RenderStream(r io.Reader, vars Variables) (string, error) {
+	return New(r).With(vars).Render()
+}
+
 // Create template pointer from io.Reader stream
 func New(r io.Reader) *Template {
 	return &Template{
