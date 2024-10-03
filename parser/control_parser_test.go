@@ -26,8 +26,8 @@ func TestForControl(t *testing.T) {
 			input: "%{for v in list }foo%{endfor}",
 			expect: []ast.Node{
 				&ast.For{
-					Interator: &ast.Ident{Value: "list"},
-					Arg1:      &ast.Ident{Value: "v"},
+					Iterator: &ast.Ident{Value: "list"},
+					Arg1:     &ast.Ident{Value: "v"},
 					Block: []ast.Node{
 						&ast.Literal{
 							Value: "foo",
@@ -46,8 +46,8 @@ func TestForControl(t *testing.T) {
 						LeftTrim:  true,
 						RightTrim: true,
 					},
-					Interator: &ast.Ident{Value: "list"},
-					Arg1:      &ast.Ident{Value: "v"},
+					Iterator: &ast.Ident{Value: "list"},
+					Arg1:     &ast.Ident{Value: "v"},
 					Block: []ast.Node{
 						&ast.Literal{
 							Value: "foo",
@@ -71,9 +71,9 @@ func TestForControl(t *testing.T) {
 						LeftTrim:  true,
 						RightTrim: true,
 					},
-					Interator: &ast.Ident{Value: "list"},
-					Arg1:      &ast.Ident{Value: "v"},
-					Arg2:      &ast.Ident{Value: "w"},
+					Iterator: &ast.Ident{Value: "list"},
+					Arg1:     &ast.Ident{Value: "v"},
+					Arg2:     &ast.Ident{Value: "w"},
 					Block: []ast.Node{
 						&ast.Literal{
 							Value: "foo",
@@ -95,8 +95,8 @@ func TestForControl(t *testing.T) {
 %{ endfor }`,
 			expect: []ast.Node{
 				&ast.For{
-					Interator: &ast.Ident{Value: "list"},
-					Arg1:      &ast.Ident{Value: "v"},
+					Iterator: &ast.Ident{Value: "list"},
+					Arg1:     &ast.Ident{Value: "v"},
 					Block: []ast.Node{
 						&ast.Literal{Value: "\n"},
 						&ast.For{
@@ -104,8 +104,8 @@ func TestForControl(t *testing.T) {
 								LeftTrim:  true,
 								RightTrim: true,
 							},
-							Interator: &ast.Ident{Value: "v"},
-							Arg1:      &ast.Ident{Value: "w"},
+							Iterator: &ast.Ident{Value: "v"},
+							Arg1:     &ast.Ident{Value: "w"},
 							Block: []ast.Node{
 								&ast.Interporation{
 									Value: &ast.Ident{Value: "w"},

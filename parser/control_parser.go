@@ -59,7 +59,7 @@ func (p *Parser) parseForControl() (*ast.For, error) {
 	if !p.curTokenIs(token.IDENT) {
 		return nil, errors.WithStack(UnexpectedToken(p.curToken, token.IDENT))
 	}
-	node.Interator = p.parseIdent()
+	node.Iterator = p.parseIdent()
 
 	if !p.peekTokenIs(token.CONTROL_END) {
 		return nil, errors.WithStack(UnexpectedToken(p.curToken, token.CONTROL_END))

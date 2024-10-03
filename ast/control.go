@@ -3,12 +3,12 @@ package ast
 import "github.com/ysugimoto/tender/token"
 
 type For struct {
-	Token     token.Token
-	Interator *Ident
-	Arg1      *Ident
-	Arg2      *Ident
-	Block     []Node
-	End       *EndFor
+	Token    token.Token
+	Iterator *Ident
+	Arg1     *Ident
+	Arg2     *Ident
+	Block    []Node
+	End      *EndFor
 }
 
 func (n *For) GetToken() token.Token { return n.Token }
