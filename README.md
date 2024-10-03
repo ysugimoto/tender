@@ -78,7 +78,7 @@ This is block if i is other value.
 `tender` recognize following operators:
 
 | operator | comparison                            |
-|:========:|:======================================|
+|:--------:|:--------------------------------------|
 | a `==` b | compare a is equal to b.              |
 | a `!=` b | compare a is not equal to b.          |
 | a `>` b  | compare a is greater than b.          |
