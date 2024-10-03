@@ -107,7 +107,7 @@ If you provide "value" variable with "tender", the result will be `The template 
 
 ### Environment variables
 
-`tender` can also reference environment variable is interporation name is `[A-Z_]+` format.
+`tender` can also reference environment variable if interporation name is `[A-Z_]+` format.
 
 ```
 The environment vairable is ${SERVICE_NAME}.
