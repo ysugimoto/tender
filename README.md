@@ -77,16 +77,16 @@ This is block if i is other value.
 
 `tender` recognize following operators:
 
-| operator | comparison                            |
-|:--------:|:--------------------------------------|
-| a `==` b | compare a is equal to b.              |
-| a `!=` b | compare a is not equal to b.          |
-| a `>` b  | compare a is greater than b.          |
-| a `>=` b | compare a is greater than equal to b. |
-| a `<` b  | compare a is less than b.             |
-| a `<=` b | compare a is less than equal to b.    |
-| a `&&` b | a and b are truthy.                   |
-| a `||` b | a or b is truthy.                     |
+| operator   | comparison                            |
+|:----------:|:--------------------------------------|
+| a `==` b   | compare a is equal to b.              |
+| a `!=` b   | compare a is not equal to b.          |
+| a `>` b    | compare a is greater than b.          |
+| a `>=` b   | compare a is greater than equal to b. |
+| a `<` b    | compare a is less than b.             |
+| a `<=` b   | compare a is less than equal to b.    |
+| a `&&` b   | a and b are truthy.                   |
+| a `\|\|` b | a or b is truthy.                     |
 
 > [!NOTE]
 > Template assigned variables are readonly. Therefore you can't do arithmetic operations variable in template like `x + 1`.
