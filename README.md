@@ -117,12 +117,12 @@ If you specify "SERVICE_NAME" environment variable with "tender", the result wil
 goos: darwin
 goarch: arm64
 pkg: benchmark
-BenchmarkRaymondRender-10          21631             54697 ns/op            9719 B/op        278 allocs/op
-BenchmarkNativeRender-10          120549              9344 ns/op            7556 B/op        141 allocs/op
-BenchmarkTenderRender-10           77595             16370 ns/op           18521 B/op        442 allocs/op
+BenchmarkRaymondRender-10          20342             61042 ns/op            9661 B/op        278 allocs/op
+BenchmarkNativeRender-10          119869             10078 ns/op            7556 B/op        141 allocs/op
+BenchmarkTenderRender-10          106476             10783 ns/op           13511 B/op        158 allocs/op
 ```
 
-We need to improve to reduce allocation X(
+The templating performance is a little same as `text/template` package :)
 
 ## Contribution
 
