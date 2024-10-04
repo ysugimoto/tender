@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 	"github.com/ysugimoto/tender/ast"
 	"github.com/ysugimoto/tender/lexer"
@@ -144,8 +146,22 @@ func (p *Parser) NextToken() {
 	p.peekToken = p.l.NextToken()
 }
 
+var nodePool = sync.Pool{
+	New: func() any {
+		nodes := make([]ast.Node, 0)
+		return &nodes
+	},
+}
+
 func (p *Parser) Parse() ([]ast.Node, error) {
-	var parsed []ast.Node
+	pool := nodePool.Get().(*[]ast.Node) // nolint:errcheck
+	parsed := *pool
+	defer func() {
+		*pool = parsed
+		nodePool.Put(pool)
+	}()
+
+	parsed = parsed[0:0]
 
 	for !p.curTokenIs(token.EOF) {
 		node, err := p.parse()
@@ -155,7 +171,10 @@ func (p *Parser) Parse() ([]ast.Node, error) {
 		parsed = append(parsed, node)
 		p.NextToken()
 	}
-	return parsed, nil
+
+	ret := make([]ast.Node, len(parsed))
+	copy(ret, parsed)
+	return ret, nil
 }
 
 func (p *Parser) parse() (ast.Node, error) {

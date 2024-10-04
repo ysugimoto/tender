@@ -69,10 +69,18 @@ func (p *Parser) parseForControl() (*ast.For, error) {
 
 	p.NextToken() // point to inside of control
 
+	pool := nodePool.Get().(*[]ast.Node) // nolint:errcheck
+	blocks := *pool
+	defer func() {
+		*pool = blocks
+		nodePool.Put(pool)
+	}()
+
+	blocks = blocks[0:0]
 	for {
 		switch p.curToken.Type {
 		case token.LITERAL:
-			node.Block = append(node.Block, &ast.Literal{
+			blocks = append(blocks, &ast.Literal{
 				Token: p.curToken,
 				Value: p.curToken.Literal,
 			})
@@ -85,9 +93,9 @@ func (p *Parser) parseForControl() (*ast.For, error) {
 				node.End = end
 				goto OUT
 			}
-			node.Block = append(node.Block, control)
+			blocks = append(blocks, control)
 		case token.INTERPORATION:
-			node.Block = append(node.Block, &ast.Interporation{
+			blocks = append(blocks, &ast.Interporation{
 				Token: p.curToken,
 				Value: p.parseIdent(),
 			})
@@ -98,6 +106,8 @@ func (p *Parser) parseForControl() (*ast.For, error) {
 	}
 OUT:
 
+	node.Block = make([]ast.Node, len(blocks))
+	copy(node.Block, blocks)
 	return node, nil
 }
 

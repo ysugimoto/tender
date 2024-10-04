@@ -8,7 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-func TestParseIdent(t *testing.T) {
+func TestParseFields(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  string
@@ -59,6 +59,15 @@ func TestParseIdent(t *testing.T) {
 				t.Errorf("Parsed ident unmatch, diff=%s", diff)
 			}
 		})
+	}
+}
+
+func BenchmarkParseFields(b *testing.B) {
+	input := `foo.bar["baz"][0]`
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		parseFields(input)
 	}
 }
 

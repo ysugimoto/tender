@@ -1,6 +1,7 @@
 package value
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
 	"sort"
@@ -23,41 +24,45 @@ func (v Value) Resolve(ident string) (reflect.Value, error) {
 		return Null, UndefinedVariable(first.name)
 	}
 
-	names := first.String()
+	names := pool.Get().(*bytes.Buffer) // nolint:errcheck
+	defer pool.Put(names)
+
+	names.Reset()
+
 	child := deref(variable)
 	for _, field := range subFields {
 		switch {
 		case IsMap(child):
 			child = child.MapIndex(reflect.ValueOf(field.name))
 			if child == zero {
-				return Null, UndefinedKey(names, field.name)
+				return Null, UndefinedKey(names.String(), field.name)
 			}
 			child = reflect.ValueOf(child.Interface())
 		case IsSlice(child):
 			idx, err := strconv.Atoi(field.name)
 			if err != nil {
-				return Null, UnaccessibleIndex(names, field.name)
+				return Null, UnaccessibleIndex(names.String(), field.name)
 			}
 			if idx > child.Len()-1 {
-				return Null, UndefinedIndex(names, field.name)
+				return Null, UndefinedIndex(names.String(), field.name)
 			}
 			child = reflect.ValueOf(child.Index(idx).Interface())
 		case IsStruct(child):
 			// Struct field must start with Upper-case alphabet, valid field name
 			// otherwise reflect.Value.FieldByName will cause panic
 			if field.name[0] < 0x41 || field.name[0] > 0x5A {
-				return Null, InvalidFieldAccess(names, field.name)
+				return Null, InvalidFieldAccess(names.String(), field.name)
 			}
 			child = child.FieldByName(field.name)
 			if child == zero {
-				return Null, UndefinedField(names, field.name)
+				return Null, UndefinedField(names.String(), field.name)
 			}
 			child = reflect.ValueOf(child.Interface())
 		default:
 			return Null, UndefinedVariable(field.name)
 		}
 		child = deref(child)
-		names += field.String()
+		names.WriteString(field.String())
 	}
 
 	return child, nil
@@ -236,7 +241,8 @@ func ToString(v reflect.Value) string {
 		}
 		return "{" + strings.Join(values, ", ") + "}"
 	case reflect.Struct:
-		var values []string
+		values := make([]string, v.NumField())
+		index := 0
 
 		for i := 0; i < v.NumField(); i++ {
 			f := v.Type().Field(i)
@@ -244,9 +250,10 @@ func ToString(v reflect.Value) string {
 			if fv.IsZero() {
 				continue
 			}
-			values = append(values, f.Name+": "+ToString(fv))
+			values[index] = f.Name + ": " + ToString(fv)
+			index++
 		}
-		return "{" + strings.Join(values, ", ") + "}"
+		return "{" + strings.Join(values[:index], ", ") + "}"
 	default:
 		return fmt.Sprintf("%v", v)
 	}

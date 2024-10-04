@@ -1,7 +1,9 @@
 package value
 
 import (
+	"bytes"
 	"reflect"
+	"sync"
 )
 
 type fieldSyntax int
@@ -31,47 +33,65 @@ func (f Field) String() string {
 	}
 }
 
+var pool = sync.Pool{
+	New: func() any {
+		return new(bytes.Buffer)
+	},
+}
+
 func parseFields(ident string) (Field, []Field) {
-	var parsed []Field
+	parsed := make([]Field, 8)
+	index := 0
 
-	runes := []rune(ident)
-	stack := Field{syntax: none}
+	buf := pool.Get().(*bytes.Buffer) // nolint:errcheck
+	defer pool.Put(buf)
 
-	for i := 0; i < len(runes); i++ {
+	buf.Reset()
+	syntax := none
+
+	for i := 0; i < len(ident); i++ {
 		switch ident[i] {
 		case '.':
-			if stack.name != "" {
-				parsed = append(parsed, stack)
-				stack = Field{syntax: dot}
+			if buf.Len() > 0 {
+				parsed[index] = Field{name: buf.String(), syntax: syntax}
+				index++
+				syntax = dot
+				buf.Reset()
 			}
 		case '[':
-			if stack.name != "" {
-				parsed = append(parsed, stack)
+			if buf.Len() > 0 {
+				parsed[index] = Field{name: buf.String(), syntax: syntax}
+				index++
+				buf.Reset()
 			}
-			stack = Field{syntax: sliceBracket}
+
+			syntax = sliceBracket
 			j := i + 1
 			for ; j < len(ident); j++ {
 				if ident[j] == '"' {
-					stack.syntax = mapBracket
+					syntax = mapBracket
 					continue
 				}
 				if ident[j] == ']' {
 					break
 				}
-				stack.name += string(runes[j])
+				buf.WriteByte(ident[j])
 			}
 			i = j
-			parsed = append(parsed, stack)
-			stack = Field{syntax: none}
+			parsed[index] = Field{name: buf.String(), syntax: syntax}
+			index++
+			syntax = none
+			buf.Reset()
 		default:
-			stack.name += string(runes[i])
+			buf.WriteByte(ident[i])
 		}
 	}
 
-	if stack.name != "" {
-		parsed = append(parsed, stack)
+	if buf.Len() > 0 {
+		parsed[index] = Field{name: buf.String(), syntax: syntax}
+		index++
 	}
-	return parsed[0], parsed[1:]
+	return parsed[0], parsed[1:index]
 }
 
 func deref(v reflect.Value) reflect.Value {

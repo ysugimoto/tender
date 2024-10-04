@@ -4,15 +4,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/ysugimoto/tender/ast"
 	"github.com/ysugimoto/tender/lexer"
 	"github.com/ysugimoto/tender/token"
 )
-
-var ignores = []cmp.Option{
-	cmpopts.IgnoreFields(token.Token{}, "Line", "Position", "Type", "Literal"),
-}
 
 func TestForControl(t *testing.T) {
 	tests := []struct {

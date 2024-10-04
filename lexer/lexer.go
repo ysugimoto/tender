@@ -83,7 +83,6 @@ func (l *Lexer) readChar() {
 	}
 	l.index += 1
 	l.char = rn
-	// l.buffer.WriteRune(rn)
 }
 
 func (l *Lexer) peekChar() rune {
@@ -95,8 +94,6 @@ func (l *Lexer) peekChar() rune {
 }
 
 func (l *Lexer) NewLine() {
-	// l.lines = append(l.lines, strings.TrimRight(l.buffer.String(), "\n"))
-	// l.buffer = new(bytes.Buffer)
 	l.index = 0
 	l.line++
 }
@@ -138,7 +135,10 @@ func (l *Lexer) NextToken() token.Token {
 }
 
 func (l *Lexer) nextToken() token.Token {
-	var stack []rune
+	buf := pool.Get().(*bytes.Buffer) // nolint:errcheck
+	defer pool.Put(buf)
+
+	buf.Reset()
 
 	// Store start line and index
 	index, line := l.index, l.line
@@ -148,14 +148,14 @@ func (l *Lexer) nextToken() token.Token {
 		case '%':
 			switch l.peekChar() {
 			case '%': // escaped percent sign
-				stack = append(stack, l.char)
+				buf.WriteRune(l.char)
 				l.readChar()
 				goto CONT
 			case '{':
 				l.readChar()
 				if l.peekChar() == '~' { // trim control
 					l.readChar()
-					if len(stack) == 0 {
+					if buf.Len() == 0 {
 						l.pushState(Control)
 						t := newToken(token.CONTROL_START, "%{~", line, index)
 						t.LeftTrim = true
@@ -163,32 +163,32 @@ func (l *Lexer) nextToken() token.Token {
 					}
 					l.pushState(ControlStartTrim)
 				} else {
-					if len(stack) == 0 {
+					if buf.Len() == 0 {
 						l.pushState(Control)
 						return newToken(token.CONTROL_START, "%{", line, index)
 					}
 					l.pushState(ControlStart)
 				}
-				return newToken(token.LITERAL, string(stack), line, index)
+				return newToken(token.LITERAL, buf.String(), line, index)
 			default:
 				return newToken(token.ILLEGAL, "Unexpected '%' character found", l.line, l.index)
 			}
 		case '$':
 			switch l.peekChar() {
 			case '$': // escaped dollar sign
-				stack = append(stack, l.char)
+				buf.WriteRune(l.char)
 				l.readChar()
 				goto CONT
 			case '{':
 				l.readChar()
-				if len(stack) == 0 {
+				if buf.Len() == 0 {
 					l.readChar()
 					t := l.nextInterporationToken()
 					t.Position -= 2
 					return t
 				}
 				l.pushState(Interporation)
-				return newToken(token.LITERAL, string(stack), line, index)
+				return newToken(token.LITERAL, buf.String(), line, index)
 			default:
 				return newToken(token.ILLEGAL, "Unexpected '$' character found", l.line, l.index)
 			}
@@ -197,12 +197,12 @@ func (l *Lexer) nextToken() token.Token {
 				l.NewLine()
 				l.isEOF = true
 			}
-			if len(stack) > 0 {
-				return newToken(token.LITERAL, string(stack), line, index)
+			if buf.Len() > 0 {
+				return newToken(token.LITERAL, buf.String(), line, index)
 			}
 			return newToken(token.EOF, "", line, index)
 		default:
-			stack = append(stack, l.char)
+			buf.WriteRune(l.char)
 		}
 	CONT:
 		l.readChar()
@@ -345,7 +345,7 @@ var pool = sync.Pool{
 }
 
 func (l *Lexer) readLiteral() (string, bool) {
-	buf := pool.Get().(*bytes.Buffer)
+	buf := pool.Get().(*bytes.Buffer) // nolint:errcheck
 	defer pool.Put(buf)
 
 	buf.Reset()
@@ -388,7 +388,7 @@ func (l *Lexer) readLiteral() (string, bool) {
 }
 
 func (l *Lexer) readIdentifier() string {
-	buf := pool.Get().(*bytes.Buffer)
+	buf := pool.Get().(*bytes.Buffer) // nolint:errcheck
 	defer pool.Put(buf)
 
 	buf.Reset()
@@ -401,7 +401,7 @@ func (l *Lexer) readIdentifier() string {
 }
 
 func (l *Lexer) readString() string {
-	buf := pool.Get().(*bytes.Buffer)
+	buf := pool.Get().(*bytes.Buffer) // nolint:errcheck
 	defer pool.Put(buf)
 
 	buf.Reset()
@@ -419,7 +419,7 @@ func (l *Lexer) readString() string {
 }
 
 func (l *Lexer) readNumber() string {
-	buf := pool.Get().(*bytes.Buffer)
+	buf := pool.Get().(*bytes.Buffer) // nolint:errcheck
 	defer pool.Put(buf)
 
 	buf.Reset()
