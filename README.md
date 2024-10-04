@@ -111,6 +111,23 @@ The environment vairable is ${SERVICE_NAME}.
 
 If you specify "SERVICE_NAME" environment variable with "tender", the result will be `The environment variable is tender`.
 
+### HTML Escape
+
+`tender` aims to better text templaing but sometime you'd like to to do HTML escape for generating `text/html` mime-type content.
+
+Then you can pass the `tender.WithHtmlEscape()` option to the renderer.
+
+```go
+tender.Must(tender.Render(
+    tmpl,
+    map[string]any{"name": "tender"},
+    tender.WithHtmlEscape(),
+))
+```
+
+HTML escaping behavior is the same as [htmlspecialchars](https://www.php.net/manual/en/function.htmlspecialchars.php) function of PHP.
+
+
 ## Performance Benchmark
 
 ```
