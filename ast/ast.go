@@ -18,7 +18,6 @@ type Expression interface {
 
 type Literal struct {
 	Token token.Token
-	Value string
 }
 
 func (n *Literal) GetToken() token.Token { return n.Token }
