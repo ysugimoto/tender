@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"io"
 	"strings"
+	"sync"
 
 	"github.com/ysugimoto/tender/token"
 )
@@ -22,12 +23,12 @@ const (
 )
 
 type Lexer struct {
-	r      *bufio.Reader
-	char   rune
-	line   int
-	index  int
-	buffer *bytes.Buffer
-	lines  []string
+	r     *bufio.Reader
+	char  rune
+	line  int
+	index int
+	// buffer *bytes.Buffer
+	// lines  []string
 	// file   string
 	isEOF  bool
 	states []State
@@ -35,9 +36,9 @@ type Lexer struct {
 
 func New(r io.Reader) *Lexer {
 	l := &Lexer{
-		r:      bufio.NewReader(r),
-		line:   1,
-		buffer: new(bytes.Buffer),
+		r:    bufio.NewReader(r),
+		line: 1,
+		// buffer: new(bytes.Buffer),
 		states: []State{Default},
 	}
 	l.readChar()
@@ -82,7 +83,7 @@ func (l *Lexer) readChar() {
 	}
 	l.index += 1
 	l.char = rn
-	l.buffer.WriteRune(rn)
+	// l.buffer.WriteRune(rn)
 }
 
 func (l *Lexer) peekChar() rune {
@@ -94,8 +95,8 @@ func (l *Lexer) peekChar() rune {
 }
 
 func (l *Lexer) NewLine() {
-	l.lines = append(l.lines, strings.TrimRight(l.buffer.String(), "\n"))
-	l.buffer = new(bytes.Buffer)
+	// l.lines = append(l.lines, strings.TrimRight(l.buffer.String(), "\n"))
+	// l.buffer = new(bytes.Buffer)
 	l.index = 0
 	l.line++
 }
@@ -337,8 +338,18 @@ func (l *Lexer) skipWhitespace() {
 	}
 }
 
+var pool = sync.Pool{
+	New: func() any {
+		return new(bytes.Buffer)
+	},
+}
+
 func (l *Lexer) readLiteral() (string, bool) {
-	literal := l.readIdentifier()
+	buf := pool.Get().(*bytes.Buffer)
+	defer pool.Put(buf)
+
+	buf.Reset()
+	buf.WriteString(l.readIdentifier())
 
 	// Read more neighbor digit, dot, underscore, left bracket
 	for {
@@ -346,21 +357,21 @@ func (l *Lexer) readLiteral() (string, bool) {
 		switch {
 		case isLetter(peek):
 			l.readChar()
-			literal += l.readIdentifier()
+			buf.WriteString(l.readIdentifier())
 		case peek == '_' || peek == '.' || isDigit(l.char):
 			l.readChar()
-			literal += string(l.char)
+			buf.WriteRune(l.char)
 		// Array or map indexing as `["..."]`
 		case peek == '[':
 			l.readChar()
-			literal += string(l.char)
+			buf.WriteRune(l.char)
 			switch {
 			case l.peekChar() == '"': // string - object key indexing
 				l.readChar()
-				literal += `"` + l.readString() + `"`
+				buf.WriteString(`"` + l.readString() + `"`)
 			case isDigit(l.peekChar()): // digit - array indexing
 				l.readChar()
-				literal += l.readNumber()
+				buf.WriteString(l.readNumber())
 			default: // illegal
 				return "", false
 			}
@@ -369,43 +380,56 @@ func (l *Lexer) readLiteral() (string, bool) {
 				return "", false
 			}
 			l.readChar()
-			literal += string(l.char)
+			buf.WriteRune(l.char)
 		default:
-			return literal, true
+			return buf.String(), true
 		}
 	}
 }
 
 func (l *Lexer) readIdentifier() string {
-	rs := []rune{l.char}
+	buf := pool.Get().(*bytes.Buffer)
+	defer pool.Put(buf)
+
+	buf.Reset()
+	buf.WriteRune(l.char)
 	for isLetter(l.peekChar()) {
 		l.readChar()
-		rs = append(rs, l.char)
+		buf.WriteRune(l.char)
 	}
-	return string(rs)
+	return buf.String()
 }
 
 func (l *Lexer) readString() string {
-	var rs []rune
+	buf := pool.Get().(*bytes.Buffer)
+	defer pool.Put(buf)
+
+	buf.Reset()
+
 	l.readChar()
 	for {
 		if l.char == '"' || l.char == 0x00 {
 			break
 		}
-		rs = append(rs, l.char)
+		buf.WriteRune(l.char)
 		l.readChar()
 	}
 
-	return string(rs)
+	return buf.String()
 }
 
 func (l *Lexer) readNumber() string {
-	rs := []rune{l.char}
+	buf := pool.Get().(*bytes.Buffer)
+	defer pool.Put(buf)
+
+	buf.Reset()
+	buf.WriteRune(l.char)
+
 	for isDigit(l.peekChar()) {
 		l.readChar()
-		rs = append(rs, l.char)
+		buf.WriteRune(l.char)
 	}
-	return string(rs)
+	return buf.String()
 }
 
 func newToken(tokenType token.TokenType, literal string, line, index int) token.Token {
