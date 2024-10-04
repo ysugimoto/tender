@@ -540,3 +540,43 @@ That's all, very simplified!
 		return
 	}
 }
+
+func BenchmarkRender(b *testing.B) {
+	input := `This is template spec.
+
+%{ for v in some_list ~}
+inside loop, ${v} is variable interporation.
+%{ endfor }
+
+%{~ for i, v in some_map }
+Also can loop for map.
+%{ endfor }
+
+%{ if v == "v" }
+if expression is also supported. Interporation is ${v}.
+%{ elseif v == "w" }
+Render when v is "w".
+%{ else }
+else also.
+%{ endif }
+
+%{ if (v == "v" && w == "w") || v != "x" }complicated condition%{endif}
+
+%%{ should recognize escaped string
+$$ is escaped dollar character
+
+That's all, very simplified!
+`
+
+	vars := Variables{
+		"some_list": []string{"foo"},
+		"some_map":  map[string]any{},
+		"v":         "v",
+		"w":         "w",
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		NewFromString(input).With(vars).Render()
+	}
+}

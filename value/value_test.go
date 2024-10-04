@@ -74,6 +74,22 @@ func TestResolveValue(t *testing.T) {
 	}
 }
 
+func BenchmarkResolveValue(b *testing.B) {
+	global := Value{
+		"map": reflect.ValueOf(map[string]any{
+			"key":    "Value",
+			"nested": []int{1},
+		}),
+	}
+
+	input := `map["nested"][0]`
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		global.Resolve(input)
+	}
+}
+
 type testStruct struct {
 	name string
 }
