@@ -113,7 +113,7 @@ If you specify "SERVICE_NAME" environment variable with "tender", the result wil
 
 ### HTML Escape
 
-`tender` aims to better text templaing but sometime you'd like to to do HTML escape for generating `text/html` mime-type content.
+`tender` aims to be better text templaing but sometime you'd like to to do HTML escape for generating `text/html` mime-type content.
 
 Then you can pass the `tender.WithHtmlEscape()` option to the renderer.
 
