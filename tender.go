@@ -21,30 +21,39 @@ type Template struct {
 	reader io.Reader
 	global value.Value
 	locals []value.Value
+
+	// Option value fields
+	enableEscape bool
 }
 
 // Shorthand render function from string
-func Render(tpl string, vars Variables) (string, error) {
-	return NewFromString(tpl).With(vars).Render()
+func Render(tpl string, vars Variables, opts ...RenderOption) (string, error) {
+	return NewFromString(tpl, opts...).With(vars).Render()
 }
 
 // Shorthand render function from stream
-func RenderStream(r io.Reader, vars Variables) (string, error) {
-	return New(r).With(vars).Render()
+func RenderStream(r io.Reader, vars Variables, opts ...RenderOption) (string, error) {
+	return New(r, opts...).With(vars).Render()
 }
 
 // Create template pointer from io.Reader stream
-func New(r io.Reader) *Template {
-	return &Template{
+func New(r io.Reader, opts ...RenderOption) *Template {
+	t := &Template{
 		reader: r,
 		global: value.Value{},
 		locals: []value.Value{},
 	}
+
+	for i := range opts {
+		opts[i](t)
+	}
+
+	return t
 }
 
 // Create template pointer from template string
-func NewFromString(tmpl string) *Template {
-	return New(strings.NewReader(tmpl))
+func NewFromString(tmpl string, opts ...RenderOption) *Template {
+	return New(strings.NewReader(tmpl), opts...)
 }
 
 // Assign variables to this template rendering

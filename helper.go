@@ -71,3 +71,33 @@ func isEnvironmentVariable(ident string) bool {
 	}
 	return true
 }
+
+var escapeMap = map[byte]string{
+	'<':  "&lt;",
+	'>':  "&gt;",
+	'&':  "&amp;",
+	'"':  "&quot;",
+	'\'': "&apos;",
+}
+
+func escapeHTML(v string) string {
+	buf := pool.Get().(*bytes.Buffer) // nolint:errcheck
+	defer pool.Put(buf)
+
+	buf.Reset()
+
+	for i := range v {
+		c := v[i]
+		if c >= utf8.RuneSelf {
+			buf.WriteByte(c)
+			continue
+		}
+		if rep, ok := escapeMap[v[i]]; ok {
+			buf.WriteString(rep)
+			continue
+		}
+		buf.WriteByte(c)
+	}
+
+	return buf.String()
+}

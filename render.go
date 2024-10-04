@@ -79,6 +79,7 @@ func (t *Template) render(nodes []ast.Node) (string, error) {
 				}
 			}
 		case *ast.Interporation:
+			var val string
 			if isEnvironmentVariable(n.Value.Value) {
 				v, ok := os.LookupEnv(n.Value.Value)
 				if !ok {
@@ -86,14 +87,19 @@ func (t *Template) render(nodes []ast.Node) (string, error) {
 						`environment variable "` + n.Value.Value + `" is not specified"`,
 					))
 				}
-				buf.WriteString(v)
+				val = v
 			} else {
 				v, err := t.lookupVariable(n.Value.Value)
 				if err != nil {
 					return "", errors.WithStack(err)
 				}
-				buf.WriteString(value.ToString(v))
+				val = value.ToString(v)
 			}
+
+			if t.enableEscape {
+				val = escapeHTML(val)
+			}
+			buf.WriteString(val)
 		default:
 			return "", errors.New("Unexpected node found")
 		}
