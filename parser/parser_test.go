@@ -11,7 +11,7 @@ import (
 )
 
 var ignores = []cmp.Option{
-	cmpopts.IgnoreFields(token.Token{}, "Line", "Position", "Type", "Literal"),
+	cmpopts.IgnoreFields(token.Token{}, "Line", "Position", "Type"),
 }
 
 func TestParser(t *testing.T) {
@@ -48,132 +48,227 @@ That's all, very simplified!
 
 	expect := []ast.Node{
 		&ast.Literal{
-			Value: `This is template spec.
+			Token: token.Token{
+				Literal: `This is template spec.
 
 `,
+			},
 		},
 		&ast.For{
 			Token: token.Token{
+				Literal:   "for",
 				RightTrim: true,
 			},
-			Iterator: &ast.Ident{Value: "some_list"},
-			Arg1:     &ast.Ident{Value: "v"},
+			Iterator: &ast.Ident{
+				Token: token.Token{
+					Literal: "some_list",
+				},
+				Value: "some_list",
+			},
+			Arg1: &ast.Ident{
+				Token: token.Token{
+					Literal: "v",
+				},
+				Value: "v",
+			},
 			Block: []ast.Node{
 				&ast.Literal{
-					Value: "\ninside loop, ",
+					Token: token.Token{Literal: "\ninside loop, "},
 				},
 				&ast.Interporation{
-					Value: &ast.Ident{Value: "v"},
+					Token: token.Token{
+						Literal: "v",
+					},
+					Value: &ast.Ident{
+						Token: token.Token{
+							Literal: "v",
+						},
+						Value: "v",
+					},
 				},
 				&ast.Literal{
-					Value: " is variable interporation.\n",
+					Token: token.Token{Literal: " is variable interporation.\n"},
 				},
 			},
-			End: &ast.EndFor{},
+			End: &ast.EndFor{
+				Token: token.Token{
+					Literal: "endfor",
+				},
+			},
 		},
 		&ast.Literal{
-			Value: "\n\n",
+			Token: token.Token{Literal: "\n\n"},
 		},
 		&ast.For{
 			Token: token.Token{
+				Literal:  "for",
 				LeftTrim: true,
 			},
-			Iterator: &ast.Ident{Value: "some_map"},
-			Arg1:     &ast.Ident{Value: "i"},
-			Arg2:     &ast.Ident{Value: "v"},
+			Iterator: &ast.Ident{
+				Token: token.Token{
+					Literal: "some_map",
+				},
+				Value: "some_map",
+			},
+			Arg1: &ast.Ident{
+				Token: token.Token{
+					Literal: "i",
+				},
+				Value: "i",
+			},
+			Arg2: &ast.Ident{
+				Token: token.Token{
+					Literal: "v",
+				},
+				Value: "v",
+			},
 			Block: []ast.Node{
 				&ast.Literal{
-					Value: "\nAlso can loop for map.\n",
+					Token: token.Token{Literal: "\nAlso can loop for map.\n"},
 				},
 			},
-			End: &ast.EndFor{},
+			End: &ast.EndFor{
+				Token: token.Token{
+					Literal: "endfor",
+				},
+			},
 		},
 		&ast.Literal{
-			Value: "\n\n",
+			Token: token.Token{Literal: "\n\n"},
 		},
 		&ast.If{
+			Token: token.Token{Literal: "if"},
 			Condition: &ast.InfixExpression{
-				Left:     &ast.Ident{Value: "v"},
+				Token: token.Token{Literal: "=="},
+				Left: &ast.Ident{
+					Token: token.Token{Literal: "v"},
+					Value: "v",
+				},
 				Operator: "==",
-				Right:    &ast.String{Value: "v"},
+				Right: &ast.String{
+					Token: token.Token{Literal: "v"},
+					Value: "v",
+				},
 			},
 			Another: []*ast.ElseIf{
-				&ast.ElseIf{
+				{
+					Token: token.Token{Literal: "elseif"},
 					Condition: &ast.InfixExpression{
-						Left:     &ast.Ident{Value: "v"},
+						Token: token.Token{Literal: "=="},
+						Left: &ast.Ident{
+							Token: token.Token{Literal: "v"},
+							Value: "v",
+						},
 						Operator: "==",
-						Right:    &ast.String{Value: "w"},
+						Right: &ast.String{
+							Token: token.Token{Literal: "w"},
+							Value: "w",
+						},
 					},
 					Consequence: []ast.Node{
 						&ast.Literal{
-							Value: "\nRender when v is \"w\".\n",
+							Token: token.Token{Literal: "\nRender when v is \"w\".\n"},
 						},
 					},
 				},
 			},
 			Consequence: []ast.Node{
 				&ast.Literal{
-					Value: "\nif expression is also supported. Interporation is ",
+					Token: token.Token{Literal: "\nif expression is also supported. Interporation is "},
 				},
 				&ast.Interporation{
-					Value: &ast.Ident{Value: "v"},
+					Token: token.Token{Literal: "v"},
+					Value: &ast.Ident{
+						Token: token.Token{Literal: "v"},
+						Value: "v",
+					},
 				},
 				&ast.Literal{
-					Value: ".\n",
+					Token: token.Token{Literal: ".\n"},
 				},
 			},
 			Alternative: &ast.Else{
+				Token: token.Token{Literal: "else"},
 				Consequence: []ast.Node{
 					&ast.Literal{
-						Value: "\nelse also.\n",
+						Token: token.Token{Literal: "\nelse also.\n"},
 					},
 				},
 			},
-			End: &ast.EndIf{},
+			End: &ast.EndIf{
+				Token: token.Token{Literal: "endif"},
+			},
 		},
 		&ast.Literal{
-			Value: "\n\n",
+			Token: token.Token{Literal: "\n\n"},
 		},
 		&ast.If{
+			Token: token.Token{Literal: "if"},
 			Condition: &ast.InfixExpression{
+				Token: token.Token{Literal: "||"},
 				Left: &ast.GroupedExpression{
+					Token: token.Token{Literal: "("},
 					Right: &ast.InfixExpression{
+						Token: token.Token{Literal: "&&"},
 						Left: &ast.InfixExpression{
-							Left:     &ast.Ident{Value: "v"},
+							Token: token.Token{Literal: "=="},
+							Left: &ast.Ident{
+								Token: token.Token{Literal: "v"},
+								Value: "v",
+							},
 							Operator: "==",
-							Right:    &ast.String{Value: "v"},
+							Right: &ast.String{
+								Token: token.Token{Literal: "v"},
+								Value: "v",
+							},
 						},
 						Operator: "&&",
 						Right: &ast.InfixExpression{
-							Left:     &ast.Ident{Value: "w"},
+							Token: token.Token{Literal: "=="},
+							Left: &ast.Ident{
+								Token: token.Token{Literal: "w"},
+								Value: "w",
+							},
 							Operator: "==",
-							Right:    &ast.String{Value: "w"},
+							Right: &ast.String{
+								Token: token.Token{Literal: "w"},
+								Value: "w",
+							},
 						},
 					},
 				},
 				Operator: "||",
 				Right: &ast.InfixExpression{
-					Left:     &ast.Ident{Value: "v"},
+					Token: token.Token{Literal: "!="},
+					Left: &ast.Ident{
+						Token: token.Token{Literal: "v"},
+						Value: "v",
+					},
 					Operator: "!=",
-					Right:    &ast.String{Value: "x"},
+					Right: &ast.String{
+						Token: token.Token{Literal: "x"},
+						Value: "x",
+					},
 				},
 			},
 			Another: []*ast.ElseIf{},
 			Consequence: []ast.Node{
 				&ast.Literal{
-					Value: "complicated condition",
+					Token: token.Token{Literal: "complicated condition"},
 				},
 			},
-			End: &ast.EndIf{},
+			End: &ast.EndIf{
+				Token: token.Token{Literal: "endif"},
+			},
 		},
 		&ast.Literal{
-			Value: `
+			Token: token.Token{Literal: `
 
 %{ should recognize escaped string
 $ is escaped dollar character
 
 That's all, very simplified!
-`,
+`},
 		},
 	}
 

@@ -1,10 +1,12 @@
 package tender
 
 import (
+	"bytes"
 	"os"
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/ysugimoto/tender/ast"
@@ -23,47 +25,56 @@ func (t *Template) lookupVariable(name string) (reflect.Value, error) {
 	return t.global.Resolve(name)
 }
 
+var pool = sync.Pool{
+	New: func() any {
+		return new(bytes.Buffer)
+	},
+}
+
 // render the template from parsed AST Nodes.
 func (t *Template) render(nodes []ast.Node) (string, error) {
-	var stack []string
+	buf := pool.Get().(*bytes.Buffer) // nolint:errcheck
+	defer pool.Put(buf)
+
+	buf.Reset()
 
 	for i := range nodes {
 		switch n := nodes[i].(type) {
 		case *ast.Literal:
-			stack = append(stack, n.Value)
+			buf.WriteString(n.Token.Literal)
 		case *ast.If:
 			if n.Token.LeftTrim {
-				trimRightSpaceLastString(stack)
+				trimRightSpaceBuffer(buf)
 			}
 
 			v, err := t.renderIfControl(n)
 			if err != nil {
 				return "", errors.WithStack(err)
 			}
-			stack = append(stack, v)
+			buf.WriteString(v)
 
 			if n.End.Token.RightTrim {
 				if i+1 < len(nodes)-1 {
 					if l, ok := nodes[i+i].(*ast.Literal); ok {
-						l.Value = trimLeftSpace(l.Value)
+						l.Token.Literal = trimLeftSpace(l.Token.Literal)
 					}
 				}
 			}
 		case *ast.For:
 			if n.Token.LeftTrim {
-				trimRightSpaceLastString(stack)
+				trimRightSpaceBuffer(buf)
 			}
 
 			v, err := t.renderForControl(n)
 			if err != nil {
 				return "", errors.WithStack(err)
 			}
-			stack = append(stack, v)
+			buf.WriteString(v)
 
 			if n.End.Token.RightTrim {
 				if i+1 < len(nodes)-1 {
 					if l, ok := nodes[i+i].(*ast.Literal); ok {
-						l.Value = trimLeftSpace(l.Value)
+						l.Token.Literal = trimLeftSpace(l.Token.Literal)
 					}
 				}
 			}
@@ -75,25 +86,28 @@ func (t *Template) render(nodes []ast.Node) (string, error) {
 						`environment variable "` + n.Value.Value + `" is not specified"`,
 					))
 				}
-				stack = append(stack, v)
+				buf.WriteString(v)
 			} else {
 				v, err := t.lookupVariable(n.Value.Value)
 				if err != nil {
 					return "", errors.WithStack(err)
 				}
-				stack = append(stack, value.ToString(v))
+				buf.WriteString(value.ToString(v))
 			}
 		default:
 			return "", errors.New("Unexpected node found")
 		}
 	}
 
-	return strings.Join(stack, ""), nil
+	return buf.String(), nil
 }
 
 // Render the for control syntax
 func (t *Template) renderForControl(node *ast.For) (string, error) {
-	var stack []string
+	buf := pool.Get().(*bytes.Buffer) // nolint:errcheck
+	defer pool.Put(buf)
+
+	buf.Reset()
 
 	// Check iterator variable is assigned
 	iterator, err := t.lookupVariable(node.Iterator.Value)
@@ -123,7 +137,7 @@ func (t *Template) renderForControl(node *ast.For) (string, error) {
 			if node.End.Token.LeftTrim {
 				iteration = trimRightSpace(iteration)
 			}
-			stack = append(stack, iteration)
+			buf.WriteString(iteration)
 		}
 	case value.IsSlice(iterator):
 		for i := 0; i < iterator.Len(); i++ {
@@ -137,14 +151,14 @@ func (t *Template) renderForControl(node *ast.For) (string, error) {
 			if node.End.Token.LeftTrim {
 				iteration = trimRightSpace(iteration)
 			}
-			stack = append(stack, iteration)
+			buf.WriteString(iteration)
 		}
 	default:
 		// Otherwise, raise NotIterable error
 		return "", errors.WithStack(NotIterable(node.Iterator.Token, node.Iterator.Value))
 	}
 
-	return strings.Join(stack, ""), nil
+	return buf.String(), nil
 }
 
 // Process the one interation for the "for" block
@@ -185,25 +199,33 @@ func (t *Template) renderIfControl(node *ast.If) (string, error) {
 			Message: err.Error(),
 		})
 	}
+
+	var leftTrim, rightTrim bool
+
 	// If first if condition could evaluate as "true", render consequence block
 	if truthy {
 		v, err := t.render(node.Consequence)
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
-		if node.Token.RightTrim {
-			v = trimLeftSpace(v)
-		}
+
+		leftTrim = node.Token.RightTrim
+
 		switch {
 		case len(node.Another) > 0:
-			if node.Another[0].Token.LeftTrim {
-				v = trimRightSpace(v)
-			}
+			rightTrim = node.Another[0].Token.LeftTrim
 		case node.Alternative != nil:
-			if node.Alternative.Token.LeftTrim {
-				v = trimRightSpace(v)
-			}
+			rightTrim = node.Alternative.Token.LeftTrim
 		case node.End.Token.LeftTrim:
+			rightTrim = true
+		}
+
+		switch {
+		case leftTrim && rightTrim:
+			v = strings.TrimSpace(v)
+		case leftTrim:
+			v = trimLeftSpace(v)
+		case rightTrim:
 			v = trimRightSpace(v)
 		}
 		return v, nil
@@ -228,20 +250,24 @@ func (t *Template) renderIfControl(node *ast.If) (string, error) {
 			if err != nil {
 				return "", errors.WithStack(err)
 			}
-			if node.Token.RightTrim {
-				v = trimLeftSpace(v)
-			}
+
+			leftTrim = node.Token.RightTrim
 
 			switch {
 			case i+1 < len(node.Another)-1:
-				if node.Another[i+1].Token.LeftTrim {
-					v = trimRightSpace(v)
-				}
+				rightTrim = node.Another[i+1].Token.LeftTrim
 			case node.Alternative != nil:
-				if node.Alternative.Token.LeftTrim {
-					v = trimRightSpace(v)
-				}
+				rightTrim = node.Alternative.Token.LeftTrim
 			case node.End.Token.LeftTrim:
+				rightTrim = true
+			}
+
+			switch {
+			case leftTrim && rightTrim:
+				v = strings.TrimSpace(v)
+			case leftTrim:
+				v = trimLeftSpace(v)
+			case rightTrim:
 				v = trimRightSpace(v)
 			}
 			return v, nil
@@ -254,10 +280,16 @@ func (t *Template) renderIfControl(node *ast.If) (string, error) {
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
-		if node.Alternative.Token.RightTrim {
+
+		leftTrim = node.Alternative.Token.RightTrim
+		rightTrim = node.End.Token.LeftTrim
+
+		switch {
+		case leftTrim && rightTrim:
+			v = strings.TrimSpace(v)
+		case leftTrim:
 			v = trimLeftSpace(v)
-		}
-		if node.End.Token.LeftTrim {
+		case rightTrim:
 			v = trimRightSpace(v)
 		}
 		return v, nil

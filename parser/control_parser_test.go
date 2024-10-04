@@ -9,6 +9,10 @@ import (
 	"github.com/ysugimoto/tender/token"
 )
 
+func ref(s string) *string {
+	return &s
+}
+
 func TestForControl(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -21,14 +25,23 @@ func TestForControl(t *testing.T) {
 			input: "%{for v in list }foo%{endfor}",
 			expect: []ast.Node{
 				&ast.For{
-					Iterator: &ast.Ident{Value: "list"},
-					Arg1:     &ast.Ident{Value: "v"},
+					Token: token.Token{Literal: "for"},
+					Iterator: &ast.Ident{
+						Token: token.Token{Literal: "list"},
+						Value: "list",
+					},
+					Arg1: &ast.Ident{
+						Token: token.Token{Literal: "v"},
+						Value: "v",
+					},
 					Block: []ast.Node{
 						&ast.Literal{
-							Value: "foo",
+							Token: token.Token{Literal: "foo"},
 						},
 					},
-					End: &ast.EndFor{},
+					End: &ast.EndFor{
+						Token: token.Token{Literal: "endfor"},
+					},
 				},
 			},
 		},
@@ -38,18 +51,26 @@ func TestForControl(t *testing.T) {
 			expect: []ast.Node{
 				&ast.For{
 					Token: token.Token{
+						Literal:   "for",
 						LeftTrim:  true,
 						RightTrim: true,
 					},
-					Iterator: &ast.Ident{Value: "list"},
-					Arg1:     &ast.Ident{Value: "v"},
+					Iterator: &ast.Ident{
+						Token: token.Token{Literal: "list"},
+						Value: "list",
+					},
+					Arg1: &ast.Ident{
+						Token: token.Token{Literal: "v"},
+						Value: "v",
+					},
 					Block: []ast.Node{
 						&ast.Literal{
-							Value: "foo",
+							Token: token.Token{Literal: "foo"},
 						},
 					},
 					End: &ast.EndFor{
 						Token: token.Token{
+							Literal:   "endfor",
 							LeftTrim:  true,
 							RightTrim: true,
 						},
@@ -63,19 +84,30 @@ func TestForControl(t *testing.T) {
 			expect: []ast.Node{
 				&ast.For{
 					Token: token.Token{
+						Literal:   "for",
 						LeftTrim:  true,
 						RightTrim: true,
 					},
-					Iterator: &ast.Ident{Value: "list"},
-					Arg1:     &ast.Ident{Value: "v"},
-					Arg2:     &ast.Ident{Value: "w"},
+					Iterator: &ast.Ident{
+						Token: token.Token{Literal: "list"},
+						Value: "list",
+					},
+					Arg1: &ast.Ident{
+						Token: token.Token{Literal: "v"},
+						Value: "v",
+					},
+					Arg2: &ast.Ident{
+						Token: token.Token{Literal: "w"},
+						Value: "w",
+					},
 					Block: []ast.Node{
 						&ast.Literal{
-							Value: "foo",
+							Token: token.Token{Literal: "foo"},
 						},
 					},
 					End: &ast.EndFor{
 						Token: token.Token{
+							Literal:   "endfor",
 							LeftTrim:  true,
 							RightTrim: true,
 						},
@@ -90,32 +122,61 @@ func TestForControl(t *testing.T) {
 %{ endfor }`,
 			expect: []ast.Node{
 				&ast.For{
-					Iterator: &ast.Ident{Value: "list"},
-					Arg1:     &ast.Ident{Value: "v"},
+					Token: token.Token{
+						Literal: "for",
+					},
+					Iterator: &ast.Ident{
+						Token: token.Token{Literal: "list"},
+						Value: "list",
+					},
+					Arg1: &ast.Ident{
+						Token: token.Token{Literal: "v"},
+						Value: "v",
+					},
 					Block: []ast.Node{
-						&ast.Literal{Value: "\n"},
+						&ast.Literal{
+							Token: token.Token{Literal: "\n"},
+						},
 						&ast.For{
 							Token: token.Token{
+								Literal:   "for",
 								LeftTrim:  true,
 								RightTrim: true,
 							},
-							Iterator: &ast.Ident{Value: "v"},
-							Arg1:     &ast.Ident{Value: "w"},
+							Iterator: &ast.Ident{
+								Token: token.Token{Literal: "v"},
+								Value: "v",
+							},
+							Arg1: &ast.Ident{
+								Token: token.Token{Literal: "w"},
+								Value: "w",
+							},
 							Block: []ast.Node{
 								&ast.Interporation{
-									Value: &ast.Ident{Value: "w"},
+									Token: token.Token{Literal: "w"},
+									Value: &ast.Ident{
+										Token: token.Token{Literal: "w"},
+										Value: "w",
+									},
 								},
 							},
 							End: &ast.EndFor{
 								Token: token.Token{
+									Literal:   "endfor",
 									LeftTrim:  true,
 									RightTrim: true,
 								},
 							},
 						},
-						&ast.Literal{Value: "\n"},
+						&ast.Literal{
+							Token: token.Token{Literal: "\n"},
+						},
 					},
-					End: &ast.EndFor{},
+					End: &ast.EndFor{
+						Token: token.Token{
+							Literal: "endfor",
+						},
+					},
 				},
 			},
 		},
@@ -184,18 +245,28 @@ func TestIfControl(t *testing.T) {
 			input: `%{ if v == "v" }foo%{endif}`,
 			expect: []ast.Node{
 				&ast.If{
+					Token: token.Token{Literal: "if"},
 					Condition: &ast.InfixExpression{
-						Left:     &ast.Ident{Value: "v"},
+						Token: token.Token{Literal: "=="},
+						Left: &ast.Ident{
+							Token: token.Token{Literal: "v"},
+							Value: "v",
+						},
 						Operator: "==",
-						Right:    &ast.String{Value: "v"},
+						Right: &ast.String{
+							Token: token.Token{Literal: "v"},
+							Value: "v",
+						},
 					},
 					Another: []*ast.ElseIf{},
 					Consequence: []ast.Node{
 						&ast.Literal{
-							Value: "foo",
+							Token: token.Token{Literal: "foo"},
 						},
 					},
-					End: &ast.EndIf{},
+					End: &ast.EndIf{
+						Token: token.Token{Literal: "endif"},
+					},
 				},
 			},
 		},
@@ -205,22 +276,31 @@ func TestIfControl(t *testing.T) {
 			expect: []ast.Node{
 				&ast.If{
 					Token: token.Token{
+						Literal:   "if",
 						LeftTrim:  true,
 						RightTrim: true,
 					},
 					Condition: &ast.InfixExpression{
-						Left:     &ast.Ident{Value: "v"},
+						Token: token.Token{Literal: "=="},
+						Left: &ast.Ident{
+							Token: token.Token{Literal: "v"},
+							Value: "v",
+						},
 						Operator: "==",
-						Right:    &ast.String{Value: "v"},
+						Right: &ast.String{
+							Token: token.Token{Literal: "v"},
+							Value: "v",
+						},
 					},
 					Another: []*ast.ElseIf{},
 					Consequence: []ast.Node{
 						&ast.Literal{
-							Value: "foo",
+							Token: token.Token{Literal: "foo"},
 						},
 					},
 					End: &ast.EndIf{
 						Token: token.Token{
+							Literal:   "endif",
 							LeftTrim:  true,
 							RightTrim: true,
 						},
@@ -233,23 +313,36 @@ func TestIfControl(t *testing.T) {
 			input: `%{ if v == "v" }foo%{else}bar%{endif}`,
 			expect: []ast.Node{
 				&ast.If{
+					Token: token.Token{Literal: "if"},
 					Condition: &ast.InfixExpression{
-						Left:     &ast.Ident{Value: "v"},
+						Token: token.Token{Literal: "=="},
+						Left: &ast.Ident{
+							Token: token.Token{Literal: "v"},
+							Value: "v",
+						},
 						Operator: "==",
-						Right:    &ast.String{Value: "v"},
+						Right: &ast.String{
+							Token: token.Token{Literal: "v"},
+							Value: "v",
+						},
 					},
 					Another: []*ast.ElseIf{},
 					Consequence: []ast.Node{
 						&ast.Literal{
-							Value: "foo",
+							Token: token.Token{Literal: "foo"},
 						},
 					},
 					Alternative: &ast.Else{
+						Token: token.Token{Literal: "else"},
 						Consequence: []ast.Node{
-							&ast.Literal{Value: "bar"},
+							&ast.Literal{
+								Token: token.Token{Literal: "bar"},
+							},
 						},
 					},
-					End: &ast.EndIf{},
+					End: &ast.EndIf{
+						Token: token.Token{Literal: "endif"},
+					},
 				},
 			},
 		},
@@ -258,70 +351,108 @@ func TestIfControl(t *testing.T) {
 			input: `%{ if v == "v" }foo%{elseif v != "w"}bar%{else}%{endif}`,
 			expect: []ast.Node{
 				&ast.If{
+					Token: token.Token{Literal: "if"},
 					Condition: &ast.InfixExpression{
-						Left:     &ast.Ident{Value: "v"},
+						Token: token.Token{Literal: "=="},
+						Left: &ast.Ident{
+							Token: token.Token{Literal: "v"},
+							Value: "v",
+						},
 						Operator: "==",
-						Right:    &ast.String{Value: "v"},
+						Right: &ast.String{
+							Token: token.Token{Literal: "v"},
+							Value: "v",
+						},
 					},
 					Another: []*ast.ElseIf{
 						{
+							Token: token.Token{Literal: "elseif"},
 							Condition: &ast.InfixExpression{
-								Left:     &ast.Ident{Value: "v"},
+								Token: token.Token{Literal: "!="},
+								Left: &ast.Ident{
+									Token: token.Token{Literal: "v"},
+									Value: "v",
+								},
 								Operator: "!=",
-								Right:    &ast.String{Value: "w"},
+								Right: &ast.String{
+									Token: token.Token{Literal: "w"},
+									Value: "w",
+								},
 							},
 							Consequence: []ast.Node{
 								&ast.Literal{
-									Value: "bar",
+									Token: token.Token{Literal: "bar"},
 								},
 							},
 						},
 					},
 					Consequence: []ast.Node{
 						&ast.Literal{
-							Value: "foo",
+							Token: token.Token{Literal: "foo"},
 						},
 					},
 					Alternative: &ast.Else{
+						Token:       token.Token{Literal: "else"},
 						Consequence: []ast.Node{},
 					},
-					End: &ast.EndIf{},
+					End: &ast.EndIf{
+						Token: token.Token{Literal: "endif"},
+					},
 				},
 			},
 		},
 		{
-			name:  "seprated else if",
+			name:  "separated else if",
 			input: `%{ if v == "v" }foo%{else if v != "w"}bar%{else}%{endif}`,
 			expect: []ast.Node{
 				&ast.If{
+					Token: token.Token{Literal: "if"},
 					Condition: &ast.InfixExpression{
-						Left:     &ast.Ident{Value: "v"},
+						Token: token.Token{Literal: "=="},
+						Left: &ast.Ident{
+							Token: token.Token{Literal: "v"},
+							Value: "v",
+						},
 						Operator: "==",
-						Right:    &ast.String{Value: "v"},
+						Right: &ast.String{
+							Token: token.Token{Literal: "v"},
+							Value: "v",
+						},
 					},
 					Another: []*ast.ElseIf{
 						{
+							Token: token.Token{Literal: "else if"},
 							Condition: &ast.InfixExpression{
-								Left:     &ast.Ident{Value: "v"},
+								Token: token.Token{Literal: "!="},
+								Left: &ast.Ident{
+									Token: token.Token{Literal: "v"},
+									Value: "v",
+								},
 								Operator: "!=",
-								Right:    &ast.String{Value: "w"},
+								Right: &ast.String{
+									Value: "w",
+									Token: token.Token{Literal: "w"},
+								},
 							},
 							Consequence: []ast.Node{
 								&ast.Literal{
-									Value: "bar",
+									Token: token.Token{Literal: "bar"},
 								},
 							},
 						},
 					},
 					Consequence: []ast.Node{
 						&ast.Literal{
-							Value: "foo",
+							Token: token.Token{Literal: "foo"},
 						},
 					},
 					Alternative: &ast.Else{
+						Token:       token.Token{Literal: "else"},
 						Consequence: []ast.Node{},
 					},
-					End: &ast.EndIf{},
+					End: &ast.EndIf{
+						Token: token.Token{Literal: "endif"},
+					},
 				},
 			},
 		},
@@ -330,46 +461,73 @@ func TestIfControl(t *testing.T) {
 			input: `%{ if v == "v" }foo%{elseif v != "w"}bar%{ elseif v > 0 }baz%{else}%{endif}`,
 			expect: []ast.Node{
 				&ast.If{
+					Token: token.Token{Literal: "if"},
 					Condition: &ast.InfixExpression{
-						Left:     &ast.Ident{Value: "v"},
+						Token: token.Token{Literal: "=="},
+						Left: &ast.Ident{
+							Token: token.Token{Literal: "v"},
+							Value: "v",
+						},
 						Operator: "==",
-						Right:    &ast.String{Value: "v"},
+						Right: &ast.String{
+							Token: token.Token{Literal: "v"},
+							Value: "v",
+						},
 					},
 					Another: []*ast.ElseIf{
 						{
+							Token: token.Token{Literal: "elseif"},
 							Condition: &ast.InfixExpression{
-								Left:     &ast.Ident{Value: "v"},
+								Token: token.Token{Literal: "!="},
+								Left: &ast.Ident{
+									Token: token.Token{Literal: "v"},
+									Value: "v",
+								},
 								Operator: "!=",
-								Right:    &ast.String{Value: "w"},
+								Right: &ast.String{
+									Token: token.Token{Literal: "w"},
+									Value: "w",
+								},
 							},
 							Consequence: []ast.Node{
 								&ast.Literal{
-									Value: "bar",
+									Token: token.Token{Literal: "bar"},
 								},
 							},
 						},
 						{
+							Token: token.Token{Literal: "elseif"},
 							Condition: &ast.InfixExpression{
-								Left:     &ast.Ident{Value: "v"},
+								Token: token.Token{Literal: ">"},
+								Left: &ast.Ident{
+									Token: token.Token{Literal: "v"},
+									Value: "v",
+								},
 								Operator: ">",
-								Right:    &ast.Int{Value: 0},
+								Right: &ast.Int{
+									Token: token.Token{Literal: "0"},
+									Value: 0,
+								},
 							},
 							Consequence: []ast.Node{
 								&ast.Literal{
-									Value: "baz",
+									Token: token.Token{Literal: "baz"},
 								},
 							},
 						},
 					},
 					Consequence: []ast.Node{
 						&ast.Literal{
-							Value: "foo",
+							Token: token.Token{Literal: "foo"},
 						},
 					},
 					Alternative: &ast.Else{
+						Token:       token.Token{Literal: "else"},
 						Consequence: []ast.Node{},
 					},
-					End: &ast.EndIf{},
+					End: &ast.EndIf{
+						Token: token.Token{Literal: "endif"},
+					},
 				},
 			},
 		},
@@ -378,26 +536,37 @@ func TestIfControl(t *testing.T) {
 			input: `%{ if v }foo%{elseif !v}bar%{endif}`,
 			expect: []ast.Node{
 				&ast.If{
-					Condition: &ast.Ident{Value: "v"},
+					Token: token.Token{Literal: "if"},
+					Condition: &ast.Ident{
+						Token: token.Token{Literal: "v"},
+						Value: "v",
+					},
 					Another: []*ast.ElseIf{
 						{
+							Token: token.Token{Literal: "elseif"},
 							Condition: &ast.PrefixExpression{
+								Token:    token.Token{Literal: "!"},
 								Operator: "!",
-								Right:    &ast.Ident{Value: "v"},
+								Right: &ast.Ident{
+									Token: token.Token{Literal: "v"},
+									Value: "v",
+								},
 							},
 							Consequence: []ast.Node{
 								&ast.Literal{
-									Value: "bar",
+									Token: token.Token{Literal: "bar"},
 								},
 							},
 						},
 					},
 					Consequence: []ast.Node{
 						&ast.Literal{
-							Value: "foo",
+							Token: token.Token{Literal: "foo"},
 						},
 					},
-					End: &ast.EndIf{},
+					End: &ast.EndIf{
+						Token: token.Token{Literal: "endif"},
+					},
 				},
 			},
 		},
@@ -406,55 +575,99 @@ func TestIfControl(t *testing.T) {
 			input: `%{ if (v == "v" && w == "w") || x > -1 || y < 0 || z >= 1 }foo%{endif}`,
 			expect: []ast.Node{
 				&ast.If{
+					Token: token.Token{Literal: "if"},
 					Condition: &ast.InfixExpression{
+						Token: token.Token{Literal: "||"},
 						Left: &ast.InfixExpression{
+							Token: token.Token{Literal: "||"},
 							Left: &ast.InfixExpression{
+								Token: token.Token{Literal: "||"},
 								Left: &ast.GroupedExpression{
+									Token: token.Token{Literal: "("},
 									Right: &ast.InfixExpression{
+										Token: token.Token{Literal: "&&"},
 										Left: &ast.InfixExpression{
-											Left:     &ast.Ident{Value: "v"},
+											Token: token.Token{Literal: "=="},
+											Left: &ast.Ident{
+												Token: token.Token{Literal: "v"},
+												Value: "v",
+											},
 											Operator: "==",
-											Right:    &ast.String{Value: "v"},
+											Right: &ast.String{
+												Token: token.Token{Literal: "v"},
+												Value: "v",
+											},
 										},
 										Operator: "&&",
 										Right: &ast.InfixExpression{
-											Left:     &ast.Ident{Value: "w"},
+											Token: token.Token{Literal: "=="},
+											Left: &ast.Ident{
+												Token: token.Token{Literal: "w"},
+												Value: "w",
+											},
 											Operator: "==",
-											Right:    &ast.String{Value: "w"},
+											Right: &ast.String{
+												Token: token.Token{Literal: "w"},
+												Value: "w",
+											},
 										},
 									},
 								},
 								Operator: "||",
 								Right: &ast.InfixExpression{
-									Left:     &ast.Ident{Value: "x"},
+									Token: token.Token{Literal: ">"},
+									Left: &ast.Ident{
+										Token: token.Token{Literal: "x"},
+										Value: "x",
+									},
 									Operator: ">",
 									Right: &ast.PrefixExpression{
+										Token:    token.Token{Literal: "-"},
 										Operator: "-",
-										Right:    &ast.Int{Value: 1},
+										Right: &ast.Int{
+											Token: token.Token{Literal: "1"},
+											Value: 1,
+										},
 									},
 								},
 							},
 							Operator: "||",
 							Right: &ast.InfixExpression{
-								Left:     &ast.Ident{Value: "y"},
+								Token: token.Token{Literal: "<"},
+								Left: &ast.Ident{
+									Token: token.Token{Literal: "y"},
+									Value: "y",
+								},
 								Operator: "<",
-								Right:    &ast.Int{Value: 0},
+								Right: &ast.Int{
+									Token: token.Token{Literal: "0"},
+									Value: 0,
+								},
 							},
 						},
 						Operator: "||",
 						Right: &ast.InfixExpression{
-							Left:     &ast.Ident{Value: "z"},
+							Token: token.Token{Literal: ">="},
+							Left: &ast.Ident{
+								Token: token.Token{Literal: "z"},
+								Value: "z",
+							},
 							Operator: ">=",
-							Right:    &ast.Int{Value: 1},
+							Right: &ast.Int{
+								Token: token.Token{Literal: "1"},
+								Value: 1,
+							},
 						},
 					},
 					Another: []*ast.ElseIf{},
 					Consequence: []ast.Node{
 						&ast.Literal{
-							Value: "foo",
+							Token: token.Token{Literal: "foo"},
 						},
 					},
-					End: &ast.EndIf{},
+					End: &ast.EndIf{
+						Token: token.Token{Literal: "endif"},
+					},
 				},
 			},
 		},

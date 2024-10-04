@@ -82,7 +82,6 @@ func (p *Parser) parseForControl() (*ast.For, error) {
 		case token.LITERAL:
 			blocks = append(blocks, &ast.Literal{
 				Token: p.curToken,
-				Value: p.curToken.Literal,
 			})
 		case token.CONTROL_START:
 			control, err := p.parseControl(FOR)
@@ -173,7 +172,6 @@ func (p *Parser) parseIfControl() (*ast.If, error) {
 		case token.LITERAL:
 			appendTarget(&ast.Literal{
 				Token: p.curToken,
-				Value: p.curToken.Literal,
 			})
 		case token.CONTROL_START:
 			control, err := p.parseControl(state)
@@ -258,6 +256,7 @@ func (p *Parser) parseSeparatedElseIfControl() (*ast.ElseIf, error) {
 func (p *Parser) parseElseControl() (ast.Control, error) {
 	// else if also treats as elseif
 	if p.peekTokenIs(token.IF) {
+		p.curToken.Literal += " if"
 		return p.parseSeparatedElseIfControl()
 	}
 

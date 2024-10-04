@@ -182,7 +182,6 @@ func (p *Parser) parse() (ast.Node, error) {
 	case token.LITERAL:
 		return &ast.Literal{
 			Token: p.curToken,
-			Value: p.curToken.Literal,
 		}, nil
 	case token.CONTROL_START:
 		return p.parseControl(ROOT)

@@ -1,6 +1,7 @@
 package tender
 
 import (
+	"bytes"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -53,12 +54,11 @@ func trimRightSpace(s string) string {
 	return s[:stop]
 }
 
-// Trim last string for string slice
-func trimRightSpaceLastString(s []string) {
-	if len(s) == 0 {
-		return
-	}
-	s[len(s)-1] = trimRightSpace(s[len(s)-1])
+// strings.TrimRight implementation for *bytes.Buffer
+func trimRightSpaceBuffer(buf *bytes.Buffer) {
+	str := buf.String()
+	buf.Reset()
+	buf.WriteString(trimRightSpace(str))
 }
 
 // Check ident indicates environment variable reference.
